@@ -25,40 +25,67 @@ jobs:
           flutter-version: '3.24.5'
           channel: 'stable'
 
-      - name: Generate Android Gradle Wrapper & Configure Firebase
+      - name: Generate Clean Android Project & Configure Firebase
         run: |
           cp android/app/src/main/AndroidManifest.xml /tmp/AndroidManifest_backup.xml
+          cp android/app/google-services.json /tmp/google-services_backup.json
+          rm -rf android
           flutter create --platforms=android --org com.bdu --project-name fall_detection_app .
           cp /tmp/AndroidManifest_backup.xml android/app/src/main/AndroidManifest.xml
+          cp /tmp/google-services_backup.json android/app/google-services.json
           python3 - << 'EOF'
           from pathlib import Path
           import re
 
-          app_gradle = Path("android/app/build.gradle")
-          if app_gradle.exists():
-              txt = app_gradle.read_text()
-              txt = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 23", txt)
-              txt = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 23", txt)
-              if Path("android/app/google-services.json").exists() and "com.google.gms.google-services" not in txt:
-                  txt = txt.replace('id "dev.flutter.flutter-gradle-plugin"', 'id "dev.flutter.flutter-gradle-plugin"\n    id "com.google.gms.google-services"')
-              app_gradle.write_text(txt)
+          # 1. Configure android/settings.gradle (add com.google.gms.google-services)
+          for s_name in ["android/settings.gradle", "android/settings.gradle.kts"]:
+              sp = Path(s_name)
+              if sp.exists():
+                  stxt = sp.read_text()
+                  if "com.google.gms.google-services" not in stxt:
+                      if s_name.endswith(".kts"):
+                          stxt = stxt.replace(
+                              'id("dev.flutter.flutter-plugin-loader")',
+                              'id("com.google.gms.google-services") version "4.4.2" apply false\n    id("dev.flutter.flutter-plugin-loader")'
+                          )
+                      else:
+                          stxt = stxt.replace(
+                              'id "dev.flutter.flutter-plugin-loader"',
+                              'id "com.google.gms.google-services" version "4.4.2" apply false\n    id "dev.flutter.flutter-plugin-loader"'
+                          )
+                  sp.write_text(stxt)
+                  print(f"=== Updated {s_name} ===")
+                  print(sp.read_text())
 
-          settings_gradle = Path("android/settings.gradle")
-          if settings_gradle.exists() and Path("android/app/google-services.json").exists():
-              stxt = settings_gradle.read_text()
-              if "com.google.gms.google-services" not in stxt:
-                  stxt = stxt.replace(
-                      'id "dev.flutter.flutter-gradle-plugin"',
-                      'id "com.google.gms.google-services" version "4.4.2" apply false\n    id "dev.flutter.flutter-gradle-plugin"'
-                  )
-              settings_gradle.write_text(stxt)
+          # 2. Configure android/app/build.gradle (minSdk = 23, compileSdk = 34, google-services plugin)
+          for a_name in ["android/app/build.gradle", "android/app/build.gradle.kts"]:
+              ap = Path(a_name)
+              if ap.exists():
+                  txt = ap.read_text()
+                  txt = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 23", txt)
+                  txt = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 23", txt)
+                  txt = re.sub(r"compileSdk\s*=\s*flutter\.compileSdkVersion", "compileSdk = 34", txt)
+                  if "com.google.gms.google-services" not in txt:
+                      if a_name.endswith(".kts"):
+                          txt = txt.replace(
+                              'id("dev.flutter.flutter-gradle-plugin")',
+                              'id("dev.flutter.flutter-gradle-plugin")\n    id("com.google.gms.google-services")'
+                          )
+                      else:
+                          txt = txt.replace(
+                              'id "dev.flutter.flutter-gradle-plugin"',
+                              'id "dev.flutter.flutter-gradle-plugin"\n    id "com.google.gms.google-services"'
+                          )
+                  ap.write_text(txt)
+                  print(f"=== Updated {a_name} ===")
+                  print(ap.read_text())
           EOF
 
       - name: Install Flutter packages
         run: flutter pub get
 
       - name: Build Release APK
-        run: flutter build apk --release
+        run: flutter build apk --release --verbose
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
