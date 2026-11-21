@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "930360708772",
+    "firebase_url": "https://fall-detection-datn-c19c1-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "fall-detection-datn-c19c1",
+    "storage_bucket": "fall-detection-datn-c19c1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:930360708772:android:b2c9b310fff197ec012031",
+        "android_client_info": {
+          "package_name": "com.bdu.fall_detection_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6kbPoDoe1rVeBTR1Z90uJBCkbWqP59JY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
