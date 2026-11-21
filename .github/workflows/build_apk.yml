@@ -30,13 +30,29 @@ jobs:
           cp android/app/src/main/AndroidManifest.xml /tmp/AndroidManifest_backup.xml
           flutter create --platforms=android --org com.bdu --project-name fall_detection_app .
           cp /tmp/AndroidManifest_backup.xml android/app/src/main/AndroidManifest.xml
-          sed -i 's/minSdk = flutter.minSdkVersion/minSdk = 23/g' android/app/build.gradle || true
-          sed -i 's/minSdkVersion flutter.minSdkVersion/minSdkVersion 23/g' android/app/build.gradle || true
-          if [ -f "android/app/google-services.json" ]; then
-            echo "Found google-services.json - enabling Google Services plugin"
-            sed -i 's/id "dev.flutter.flutter-gradle-plugin"/id "dev.flutter.flutter-gradle-plugin"\n    id "com.google.gms.google-services"/g' android/app/build.gradle || true
-            sed -i 's/id "dev.flutter.flutter-gradle-plugin" version/id "com.google.gms.google-services" version "4.4.2" apply false\n    id "dev.flutter.flutter-gradle-plugin" version/g' android/settings.gradle || true
-          fi
+          python3 - << 'EOF'
+          from pathlib import Path
+          import re
+
+          app_gradle = Path("android/app/build.gradle")
+          if app_gradle.exists():
+              txt = app_gradle.read_text()
+              txt = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = 23", txt)
+              txt = re.sub(r"minSdkVersion\s+flutter\.minSdkVersion", "minSdkVersion 23", txt)
+              if Path("android/app/google-services.json").exists() and "com.google.gms.google-services" not in txt:
+                  txt = txt.replace('id "dev.flutter.flutter-gradle-plugin"', 'id "dev.flutter.flutter-gradle-plugin"\n    id "com.google.gms.google-services"')
+              app_gradle.write_text(txt)
+
+          settings_gradle = Path("android/settings.gradle")
+          if settings_gradle.exists() and Path("android/app/google-services.json").exists():
+              stxt = settings_gradle.read_text()
+              if "com.google.gms.google-services" not in stxt:
+                  stxt = stxt.replace(
+                      'id "dev.flutter.flutter-gradle-plugin"',
+                      'id "com.google.gms.google-services" version "4.4.2" apply false\n    id "dev.flutter.flutter-gradle-plugin"'
+                  )
+              settings_gradle.write_text(stxt)
+          EOF
 
       - name: Install Flutter packages
         run: flutter pub get
