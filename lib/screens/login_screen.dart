@@ -136,6 +136,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'SĐT người thân nhận tin nhắn SMS / Gọi khẩn cấp',
+                      hintText: 'Nhập SĐT người thân (VD: 09xxxxxxxx)',
+                      hintStyle: const TextStyle(color: Color(0xFF64748B)),
                       labelStyle: const TextStyle(color: Color(0xFF94A3B8)),
                       prefixIcon: const Icon(Icons.sms_outlined, color: Color(0xFFFBBF24)),
                       filled: true,

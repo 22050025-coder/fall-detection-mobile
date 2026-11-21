@@ -14,7 +14,7 @@ class ApiAndFirebaseService {
   static const String _prefEmergencyPhoneKey = 'emergency_phone';
 
   static String serverBaseUrl = 'http://192.168.1.10:5000';
-  static String emergencyPhone = '115';
+  static String emergencyPhone = '';
 
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -23,7 +23,8 @@ class ApiAndFirebaseService {
   static Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     serverBaseUrl = prefs.getString(_prefServerUrlKey) ?? 'http://192.168.1.10:5000';
-    emergencyPhone = prefs.getString(_prefEmergencyPhoneKey) ?? '115';
+    final savedPhone = prefs.getString(_prefEmergencyPhoneKey) ?? '';
+    emergencyPhone = (savedPhone == '115') ? '' : savedPhone;
   }
 
   /// Lưu địa chỉ IP Server & Số điện thoại mới mà không cần tạo lại file APK
@@ -33,7 +34,7 @@ class ApiAndFirebaseService {
       cleaned = cleaned.substring(0, cleaned.length - 1);
     }
     serverBaseUrl = cleaned;
-    emergencyPhone = newPhone.trim().isEmpty ? '115' : newPhone.trim();
+    emergencyPhone = newPhone.trim();
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_prefServerUrlKey, serverBaseUrl);
@@ -42,6 +43,7 @@ class ApiAndFirebaseService {
 
   /// Gửi tin nhắn SMS khẩn cấp từ điện thoại tới người thân
   Future<bool> sendEmergencySMS({String? customMessage}) async {
+    if (emergencyPhone.trim().isEmpty) return false;
     final body = customMessage ??
         'CANH BAO KHAN CAP! He thong AI phat hien nguoi nha bi TE NGA. Vui long kiem tra va ho tro ngay!';
     final Uri smsUri = Uri(
@@ -57,8 +59,9 @@ class ApiAndFirebaseService {
     }
   }
 
-  /// Gọi điện thoại khẩn cấp tới số người thân hoặc cấp cứu 115
+  /// Gọi điện thoại khẩn cấp tới số người thân
   Future<bool> makeEmergencyCall() async {
+    if (emergencyPhone.trim().isEmpty) return false;
     final Uri telUri = Uri(scheme: 'tel', path: emergencyPhone);
     try {
       return await launchUrl(telUri, mode: LaunchMode.externalApplication);
