@@ -49,19 +49,23 @@ class ApiAndFirebaseService {
       path: emergencyPhone,
       queryParameters: <String, String>{'body': body},
     );
-    if (await canLaunchUrl(smsUri)) {
-      return await launchUrl(smsUri);
+    try {
+      return await launchUrl(smsUri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('[SMS] Lỗi mở ứng dụng tin nhắn: $e');
+      return false;
     }
-    return false;
   }
 
   /// Gọi điện thoại khẩn cấp tới số người thân hoặc cấp cứu 115
   Future<bool> makeEmergencyCall() async {
     final Uri telUri = Uri(scheme: 'tel', path: emergencyPhone);
-    if (await canLaunchUrl(telUri)) {
-      return await launchUrl(telUri);
+    try {
+      return await launchUrl(telUri, mode: LaunchMode.externalApplication);
+    } catch (e) {
+      debugPrint('[CALL] Lỗi mở ứng dụng gọi điện: $e');
+      return false;
     }
-    return false;
   }
 
   /// Đăng ký nhận thông báo đẩy (Push Notification) từ topic 'fall_alerts'

@@ -183,7 +183,14 @@ class _HomeScreenState extends State<HomeScreen> {
                             foregroundColor: Colors.black,
                             padding: const EdgeInsets.symmetric(vertical: 11),
                           ),
-                          onPressed: () => _service.sendEmergencySMS(),
+                          onPressed: () async {
+                            final ok = await _service.sendEmergencySMS();
+                            if (!ok && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Không mở được ứng dụng Tin nhắn trên máy này!')),
+                              );
+                            }
+                          },
                           icon: const Icon(Icons.sms, size: 18),
                           label: const Text('Gửi tin nhắn SMS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         ),
