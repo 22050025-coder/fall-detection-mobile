@@ -13,7 +13,7 @@ class ApiAndFirebaseService {
   static const String _prefServerUrlKey = 'flask_server_url';
   static const String _prefEmergencyPhoneKey = 'emergency_phone';
 
-  static String serverBaseUrl = 'http://192.168.1.10:5000';
+  static String serverBaseUrl = 'http://192.168.1.15:5000';
   static String emergencyPhone = '';
 
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
@@ -22,7 +22,8 @@ class ApiAndFirebaseService {
   /// Đọc địa chỉ IP Server & Số điện thoại khẩn cấp đã lưu trong máy điện thoại
   static Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    serverBaseUrl = prefs.getString(_prefServerUrlKey) ?? 'http://192.168.1.10:5000';
+    final savedUrl = prefs.getString(_prefServerUrlKey) ?? 'http://192.168.1.15:5000';
+    serverBaseUrl = (savedUrl == 'http://192.168.1.10:5000') ? 'http://192.168.1.15:5000' : savedUrl;
     final savedPhone = prefs.getString(_prefEmergencyPhoneKey) ?? '';
     emergencyPhone = (savedPhone == '115') ? '' : savedPhone;
   }

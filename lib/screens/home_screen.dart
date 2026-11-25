@@ -1,10 +1,11 @@
 // -*- coding: utf-8 -*-
-// 2. MÀN HÌNH TRANG CHỦ GIÁM SÁT, NHẬN THÔNG BÁO FCM & GỬI TIN NHẮN SMS KHẨN CẤP (Tuần 8)
+// 2. MÀN HÌNH TRANG CHỦ GIÁM SÁT, XEM TRỰC TIẾP WEBCAM AI, NHẬN FCM & GỬI SMS (Tuần 8)
 
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/fall_event.dart';
 import '../services/api_and_firebase_service.dart';
+import '../widgets/mjpeg_live_view.dart';
 import 'history_screen.dart';
 import 'event_detail_screen.dart';
 import 'login_screen.dart';
@@ -113,11 +114,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final String streamUrl = '${ApiAndFirebaseService.serverBaseUrl}/video_feed';
+
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Giám sát Té ngã Thời gian thực', style: TextStyle(color: Colors.white, fontSize: 18)),
+        title: const Text('Giám sát Té ngã Thời gian thực', style: TextStyle(color: Colors.white, fontSize: 17.5)),
         actions: [
           IconButton(
             tooltip: 'Lịch sử sự kiện',
@@ -136,44 +139,62 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(14.0),
         child: Column(
           children: [
+            // 1. KHUNG XEM MÀN HÌNH WEBCAM AI TRỰC TIẾP TỪ LAPTOP
+            Container(
+              width: double.infinity,
+              height: 215,
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _isFallAlert ? const Color(0xFFEF4444) : const Color(0xFF334155),
+                  width: _isFallAlert ? 2.5 : 1.5,
+                ),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: MjpegLiveView(streamUrl: streamUrl),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            // 2. THẺ TRẠNG THÁI CẢNH BÁO & CÁC NÚT HÀNH ĐỘNG KHẨN CẤP
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               width: double.infinity,
-              padding: const EdgeInsets.all(18),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: _isFallAlert ? const Color(0xFFB91C1C) : const Color(0xFF065F46),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: (_isFallAlert ? Colors.red : Colors.green).withOpacity(0.35),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
                 children: [
-                  Icon(
-                    _isFallAlert ? Icons.notification_important_rounded : Icons.verified_user_rounded,
-                    size: 48,
-                    color: Colors.white,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _isFallAlert ? Icons.notification_important_rounded : Icons.verified_user_rounded,
+                        size: 26,
+                        color: Colors.white,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _isFallAlert ? 'CẢNH BÁO KHẨN CẤP: PHÁT HIỆN TÉ NGÃ!' : 'TRẠNG THÁI: AN TOÀN BÌNH THƯỜNG',
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 4),
                   Text(
-                    _isFallAlert ? 'CẢNH BÁO KHẨN CẤP: PHÁT HIỆN TÉ NGÃ!' : 'TRẠNG THÁI: AN TOÀN BÌNH THƯỜNG',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 17.5, fontWeight: FontWeight.bold, color: Colors.white),
+                    'Cập nhật: $_lastUpdate • SĐT khẩn cấp: ${ApiAndFirebaseService.emergencyPhone.isEmpty ? "Chưa đặt" : ApiAndFirebaseService.emergencyPhone}',
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    'Cập nhật gần nhất: $_lastUpdate\nSĐT khẩn cấp: ${ApiAndFirebaseService.emergencyPhone}',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 12.5, color: Colors.white70),
-                  ),
-                  const SizedBox(height: 14),
+                  const SizedBox(height: 10),
                   Row(
                     children: [
                       Expanded(
@@ -181,53 +202,60 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFFF59E0B),
                             foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
                           onPressed: () async {
                             final ok = await _service.sendEmergencySMS();
                             if (!ok && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Không mở được ứng dụng Tin nhắn trên máy này!')),
+                                const SnackBar(content: Text('Vui lòng nhập SĐT người thân ở phần Cài đặt trước!')),
                               );
                             }
                           },
-                          icon: const Icon(Icons.sms, size: 18),
-                          label: const Text('Gửi tin nhắn SMS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          icon: const Icon(Icons.sms, size: 17),
+                          label: const Text('Gửi tin nhắn SMS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                         ),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: const Color(0xFFB91C1C),
-                            padding: const EdgeInsets.symmetric(vertical: 11),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
                           ),
-                          onPressed: () => _service.makeEmergencyCall(),
-                          icon: const Icon(Icons.call, size: 18),
-                          label: const Text('Gọi khẩn cấp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          onPressed: () async {
+                            final ok = await _service.makeEmergencyCall();
+                            if (!ok && context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Vui lòng nhập SĐT người thân ở phần Cài đặt trước!')),
+                              );
+                            }
+                          },
+                          icon: const Icon(Icons.call, size: 17),
+                          label: const Text('Gọi khẩn cấp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                         ),
                       ),
                     ],
                   ),
                   if (_isFallAlert) ...[
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 8),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF16A34A),
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 11),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
                         ),
                         onPressed: () async {
                           await _service.acknowledgeAlarm();
                           setState(() => _isFallAlert = false);
                         },
-                        icon: const Icon(Icons.volume_off),
+                        icon: const Icon(Icons.volume_off, size: 18),
                         label: const Text(
                           'XÁC NHẬN AN TOÀN & TẮT CÒI BÁO ĐỘNG',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                       ),
                     ),
@@ -235,13 +263,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+
+            // 3. DANH SÁCH SỰ KIỆN TÉ NGÃ GẦN ĐÂY TỪ FIREBASE
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
                   'Sự kiện té ngã gần đây (Firebase)',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
                 ),
                 TextButton.icon(
                   onPressed: () {
@@ -252,7 +282,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
             Expanded(
               child: StreamBuilder<List<FallEvent>>(
                 stream: _service.watchFallEvents(),
@@ -271,24 +300,26 @@ class _HomeScreenState extends State<HomeScreen> {
                   }
                   return ListView.separated(
                     itemCount: events.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
                       final ev = events[i];
                       return Card(
                         color: const Color(0xFF1E293B),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         child: ListTile(
+                          dense: true,
                           leading: const CircleAvatar(
+                            radius: 18,
                             backgroundColor: Color(0xFFDC2626),
-                            child: Icon(Icons.personal_injury, color: Colors.white),
+                            child: Icon(Icons.personal_injury, color: Colors.white, size: 18),
                           ),
                           title: Text(
                             'Phát hiện Té ngã (${ev.confidencePercent})',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
                           ),
                           subtitle: Text(
                             '${ev.cameraSource} • ${ev.timestamp}',
-                            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12.5),
+                            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                           ),
                           trailing: const Icon(Icons.chevron_right, color: Colors.white54),
                           onTap: () {
