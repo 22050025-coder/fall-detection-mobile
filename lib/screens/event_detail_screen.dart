@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// 4. MÀN HÌNH CHI TIẾT SỰ KIỆN & ẢNH CHỤP CHỨNG CỨ (Tuần 8 - ĐATN Huỳnh Minh Chiến 22050025)
+// 4. MÀN HÌNH CHI TIẾT SỰ KIỆN TỐI GIẢN HIỆN ĐẠI (Minimalist Event Detail)
 
 import 'package:flutter/material.dart';
 import '../models/fall_event.dart';
@@ -16,91 +16,92 @@ class EventDetailScreen extends StatelessWidget {
     final ApiAndFirebaseService service = ApiAndFirebaseService();
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFF0B0F19),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
+        backgroundColor: const Color(0xFF0B0F19),
+        elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         title: const Text(
-          'Chi tiết sự kiện té ngã',
-          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          'Chi tiết sự cố',
+          style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(18.0),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Khung hiển thị ảnh chụp hiện trường có khoanh vùng đỏ người ngã
             Container(
               width: double.infinity,
-              height: 240,
+              height: 230,
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFEF4444), width: 2),
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: const Color(0xFF1E293B)),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(19),
                 child: fullImageUrl.isNotEmpty
                     ? Image.network(
                         fullImageUrl,
                         fit: BoxFit.contain,
                         errorBuilder: (_, __, ___) => const Center(
                           child: Text(
-                            'Ảnh minh chứng lưu tại máy chủ Flask\n(Kiểm tra kết nối cùng mạng LAN với Server)',
+                            'Ảnh lưu trên Laptop\n(Kết nối cùng Wi-Fi với Laptop để tải ảnh)',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Color(0xFF94A3B8)),
+                            style: TextStyle(color: Color(0xFF64748B), fontSize: 12.5),
                           ),
                         ),
                       )
                     : const Center(
-                        child: Icon(Icons.image_not_supported, size: 54, color: Colors.white38),
+                        child: Icon(Icons.image_not_supported_outlined, size: 42, color: Color(0xFF475569)),
                       ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: const Color(0xFF1E293B),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF334155)),
+                color: const Color(0xFF151C2C),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xFF1E293B)),
               ),
               child: Column(
                 children: [
-                  _infoRow('Mã sự kiện (Event ID):', event.eventId),
-                  const Divider(color: Color(0xFF334155), height: 24),
-                  _infoRow('Nhãn hành vi AI (Bi-LSTM):', 'TÉ NGÃ KHẨN CẤP (FALL)', isAlert: true),
-                  const Divider(color: Color(0xFF334155), height: 24),
-                  _infoRow('Độ tin cậy dự đoán:', event.confidencePercent),
-                  const Divider(color: Color(0xFF334155), height: 24),
-                  _infoRow('Nguồn thu Camera:', event.cameraSource),
-                  const Divider(color: Color(0xFF334155), height: 24),
-                  _infoRow('Thời điểm ghi nhận:', event.timestamp),
+                  _infoRow('Trạng thái AI', 'Té ngã khẩn cấp', isAlert: true),
+                  const Divider(color: Color(0xFF1E293B), height: 22),
+                  _infoRow('Độ tin cậy (Bi-LSTM)', event.confidencePercent),
+                  const Divider(color: Color(0xFF1E293B), height: 22),
+                  _infoRow('Thiết bị Camera', event.cameraSource),
+                  const Divider(color: Color(0xFF1E293B), height: 22),
+                  _infoRow('Thời gian ghi nhận', event.timestamp),
+                  const Divider(color: Color(0xFF1E293B), height: 22),
+                  _infoRow('Mã sự kiện', event.eventId),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 48,
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
+                  backgroundColor: const Color(0xFF10B981),
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
                 onPressed: () async {
                   await service.acknowledgeAlarm();
                   if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Đã xác nhận an toàn và tắt còi báo động!')),
+                    const SnackBar(content: Text('Đã xác nhận an toàn và tắt cảnh báo')),
                   );
                 },
-                icon: const Icon(Icons.check_circle_outline),
+                icon: const Icon(Icons.check_rounded, size: 20),
                 label: const Text(
-                  'XÁC NHẬN ĐÃ XỬ LÝ AN TOÀN & TẮT CÒI',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  'Xác nhận đã xử lý an toàn',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5),
                 ),
               ),
             ),
@@ -114,7 +115,7 @@ class EventDetailScreen extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5)),
+        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
         const SizedBox(width: 12),
         Flexible(
           child: Text(
@@ -122,8 +123,8 @@ class EventDetailScreen extends StatelessWidget {
             textAlign: TextAlign.right,
             style: TextStyle(
               color: isAlert ? const Color(0xFFF87171) : Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              fontSize: 13.5,
             ),
           ),
         ),

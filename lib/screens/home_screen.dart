@@ -1,5 +1,5 @@
 // -*- coding: utf-8 -*-
-// 2. MÀN HÌNH TRANG CHỦ GIÁM SÁT, XEM TRỰC TIẾP WEBCAM AI, NHẬN FCM & GỬI SMS (Tuần 8)
+// 2. MÀN HÌNH CHÍNH TỐI GIẢN HIỆN ĐẠI (Minimalist Dashboard: Live Webcam + Status + Actions + Events)
 
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -20,8 +20,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ApiAndFirebaseService _service = ApiAndFirebaseService();
   bool _isFallAlert = false;
-  String _lastUpdate = 'Đang đồng bộ...';
-  String _lastEventId = '';
+  String _lastUpdate = 'Đang đồng bộ';
 
   @override
   void initState() {
@@ -35,9 +34,9 @@ class _HomeScreenState extends State<HomeScreen> {
       onForegroundMessage: (RemoteMessage msg) {
         if (!mounted) return;
         setState(() => _isFallAlert = true);
-        _showEmergencyDialog(
-          title: msg.notification?.title ?? 'CẢNH BÁO KHẨN CẤP: PHÁT HIỆN TÉ NGÃ!',
-          body: msg.notification?.body ?? 'Phát hiện sự cố té ngã từ hệ thống Camera AI.',
+        _showEmergencySheet(
+          title: msg.notification?.title ?? 'Phát hiện té ngã khẩn cấp!',
+          body: msg.notification?.body ?? 'Hệ thống Camera AI phát hiện người nhà bị ngã.',
           data: msg.data,
         );
       },
@@ -51,63 +50,92 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _isFallAlert = val['is_fall'] == true;
           _lastUpdate = val['last_update']?.toString() ?? 'Vừa xong';
-          _lastEventId = val['last_event_id']?.toString() ?? '';
         });
       }
     });
   }
 
-  void _showEmergencyDialog({
+  void _showEmergencySheet({
     required String title,
     required String body,
     required Map<String, dynamic> data,
   }) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF7F1D1D),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
+      backgroundColor: const Color(0xFF151C2C),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(22.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 32),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 17),
+            Container(
+              width: 52,
+              height: 52,
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626).withOpacity(0.18),
+                shape: BoxShape.circle,
               ),
+              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFF87171), size: 30),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.white, fontSize: 17, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              body,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13.5),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: const BorderSide(color: Color(0xFF334155)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _service.sendEmergencySMS();
+                    },
+                    icon: const Icon(Icons.sms_outlined, size: 18),
+                    label: const Text('Gửi SMS'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      final ev = FallEvent.fromJson(data);
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => EventDetailScreen(event: ev)),
+                      );
+                    },
+                    icon: const Icon(Icons.visibility_outlined, size: 18),
+                    label: const Text('Xem ảnh'),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        content: Text(body, style: const TextStyle(color: Colors.white, fontSize: 14)),
-        actions: [
-          TextButton.icon(
-            onPressed: () => _service.sendEmergencySMS(
-              customMessage: 'KHAN CAP! Phat hien te nga luc $_lastUpdate. Vui long kiem tra ngay!',
-            ),
-            icon: const Icon(Icons.sms, color: Colors.amberAccent),
-            label: const Text('GỬI SMS NGƯỜI THÂN', style: TextStyle(color: Colors.amberAccent)),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.of(ctx).pop();
-              await _service.acknowledgeAlarm();
-            },
-            child: const Text('TẮT CÒI', style: TextStyle(color: Colors.white70)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: Colors.red.shade900),
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              final ev = FallEvent.fromJson(data);
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => EventDetailScreen(event: ev)),
-              );
-            },
-            child: const Text('XEM CHI TIẾT'),
-          ),
-        ],
       ),
     );
   }
@@ -117,184 +145,211 @@ class _HomeScreenState extends State<HomeScreen> {
     final String streamUrl = '${ApiAndFirebaseService.serverBaseUrl}/video_feed';
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFF0B0F19),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Giám sát Té ngã Thời gian thực', style: TextStyle(color: Colors.white, fontSize: 17.5)),
+        backgroundColor: const Color(0xFF0B0F19),
+        elevation: 0,
+        titleSpacing: 18,
+        title: Row(
+          children: [
+            const Text(
+              'AI Care Vision',
+              style: TextStyle(color: Colors.white, fontSize: 19, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+              decoration: BoxDecoration(
+                color: (_isFallAlert ? const Color(0xFFDC2626) : const Color(0xFF10B981)).withOpacity(0.16),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                _isFallAlert ? '● Cảnh báo' : '● An toàn',
+                style: TextStyle(
+                  color: _isFallAlert ? const Color(0xFFF87171) : const Color(0xFF34D399),
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
-            tooltip: 'Lịch sử sự kiện',
-            icon: const Icon(Icons.history, color: Colors.white),
+            tooltip: 'Lịch sử',
+            icon: const Icon(Icons.history_rounded, color: Color(0xFF94A3B8), size: 22),
             onPressed: () {
               Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen()));
             },
           ),
           IconButton(
-            tooltip: 'Đổi IP / SĐT khẩn cấp',
-            icon: const Icon(Icons.settings, color: Color(0xFF60A5FA)),
+            tooltip: 'Cài đặt IP / SĐT',
+            icon: const Icon(Icons.tune_rounded, color: Color(0xFF94A3B8), size: 21),
             onPressed: () {
               Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
             },
           ),
+          const SizedBox(width: 6),
         ],
       ),
       body: Padding(
-        padding: const EdgeInsets.all(14.0),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 1. KHUNG XEM MÀN HÌNH WEBCAM AI TRỰC TIẾP TỪ LAPTOP
+            // 1. KHUNG WEBCAM TRỰC TIẾP TỐI GIẢN, BO GÓC HIỆN ĐẠI
             Container(
               width: double.infinity,
-              height: 215,
+              height: 225,
               decoration: BoxDecoration(
-                color: Colors.black,
-                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFF111827),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: _isFallAlert ? const Color(0xFFEF4444) : const Color(0xFF334155),
-                  width: _isFallAlert ? 2.5 : 1.5,
+                  color: _isFallAlert ? const Color(0xFFEF4444) : const Color(0xFF1E293B),
+                  width: _isFallAlert ? 2.0 : 1.2,
                 ),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(18.5),
                 child: MjpegLiveView(streamUrl: streamUrl),
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
-            // 2. THẺ TRẠNG THÁI CẢNH BÁO & CÁC NÚT HÀNH ĐỘNG KHẨN CẤP
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
+            // 2. THANH TRẠNG THÁI & NÚT HÀNH ĐỘNG TỐI GIẢN
+            Container(
+              padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: _isFallAlert ? const Color(0xFFB91C1C) : const Color(0xFF065F46),
-                borderRadius: BorderRadius.circular(16),
+                color: _isFallAlert ? const Color(0xFF7F1D1D).withOpacity(0.45) : const Color(0xFF151C2C),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: _isFallAlert ? const Color(0xFFEF4444).withOpacity(0.5) : const Color(0xFF1E293B),
+                ),
               ),
               child: Column(
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        _isFallAlert ? Icons.notification_important_rounded : Icons.verified_user_rounded,
-                        size: 26,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _isFallAlert ? 'CẢNH BÁO KHẨN CẤP: PHÁT HIỆN TÉ NGÃ!' : 'TRẠNG THÁI: AN TOÀN BÌNH THƯỜNG',
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
+                      Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: (_isFallAlert ? const Color(0xFFEF4444) : const Color(0xFF10B981)).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          _isFallAlert ? Icons.warning_amber_rounded : Icons.check_circle_outline_rounded,
+                          color: _isFallAlert ? const Color(0xFFF87171) : const Color(0xFF34D399),
+                          size: 22,
                         ),
                       ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _isFallAlert ? 'Phát hiện sự cố té ngã!' : 'Hệ thống giám sát bình thường',
+                              style: const TextStyle(color: Colors.white, fontSize: 14.5, fontWeight: FontWeight.w600),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Cập nhật: $_lastUpdate',
+                              style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (_isFallAlert)
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFF10B981),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () async {
+                            await _service.acknowledgeAlarm();
+                            setState(() => _isFallAlert = false);
+                          },
+                          child: const Text('Tắt còi', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Cập nhật: $_lastUpdate • SĐT khẩn cấp: ${ApiAndFirebaseService.emergencyPhone.isEmpty ? "Chưa đặt" : ApiAndFirebaseService.emergencyPhone}',
-                    style: const TextStyle(fontSize: 12, color: Colors.white70),
-                  ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 12),
                   Row(
                     children: [
                       Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFF59E0B),
-                            foregroundColor: Colors.black,
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                          ),
-                          onPressed: () async {
+                        child: _actionButton(
+                          icon: Icons.chat_bubble_outline_rounded,
+                          label: 'Nhắn SMS',
+                          color: const Color(0xFF3B82F6),
+                          onTap: () async {
                             final ok = await _service.sendEmergencySMS();
                             if (!ok && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Vui lòng nhập SĐT người thân ở phần Cài đặt trước!')),
+                                const SnackBar(content: Text('Vui lòng nhập SĐT người thân trong Cài đặt')),
                               );
                             }
                           },
-                          icon: const Icon(Icons.sms, size: 17),
-                          label: const Text('Gửi tin nhắn SMS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                         ),
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white,
-                            foregroundColor: const Color(0xFFB91C1C),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                          ),
-                          onPressed: () async {
+                        child: _actionButton(
+                          icon: Icons.phone_outlined,
+                          label: 'Gọi khẩn cấp',
+                          color: const Color(0xFF10B981),
+                          onTap: () async {
                             final ok = await _service.makeEmergencyCall();
                             if (!ok && context.mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Vui lòng nhập SĐT người thân ở phần Cài đặt trước!')),
+                                const SnackBar(content: Text('Vui lòng nhập SĐT người thân trong Cài đặt')),
                               );
                             }
                           },
-                          icon: const Icon(Icons.call, size: 17),
-                          label: const Text('Gọi khẩn cấp', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                         ),
                       ),
                     ],
                   ),
-                  if (_isFallAlert) ...[
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF16A34A),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 10),
-                        ),
-                        onPressed: () async {
-                          await _service.acknowledgeAlarm();
-                          setState(() => _isFallAlert = false);
-                        },
-                        icon: const Icon(Icons.volume_off, size: 18),
-                        label: const Text(
-                          'XÁC NHẬN AN TOÀN & TẮT CÒI BÁO ĐỘNG',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 18),
 
-            // 3. DANH SÁCH SỰ KIỆN TÉ NGÃ GẦN ĐÂY TỪ FIREBASE
+            // 3. DANH SÁCH SỰ KIỆN GẦN ĐÂY TỐI GIẢN
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Sự kiện té ngã gần đây (Firebase)',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                  'Hoạt động gần đây',
+                  style: TextStyle(color: Color(0xFFCBD5E1), fontSize: 14.5, fontWeight: FontWeight.w600),
                 ),
-                TextButton.icon(
-                  onPressed: () {
+                GestureDetector(
+                  onTap: () {
                     Navigator.of(context).push(MaterialPageRoute(builder: (_) => const HistoryScreen()));
                   },
-                  icon: const Icon(Icons.arrow_forward, size: 16),
-                  label: const Text('Xem tất cả'),
+                  child: const Text(
+                    'Tất cả →',
+                    style: TextStyle(color: Color(0xFF60A5FA), fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ],
             ),
+            const SizedBox(height: 10),
             Expanded(
               child: StreamBuilder<List<FallEvent>>(
                 stream: _service.watchFallEvents(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(child: CircularProgressIndicator(strokeWidth: 2));
                   }
                   final events = snapshot.data ?? [];
                   if (events.isEmpty) {
                     return const Center(
                       child: Text(
-                        'Chưa ghi nhận sự cố té ngã nào trên Firebase.',
-                        style: TextStyle(color: Color(0xFF94A3B8)),
+                        'Chưa có sự cố nào được ghi nhận',
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                       ),
                     );
                   }
@@ -303,36 +358,88 @@ class _HomeScreenState extends State<HomeScreen> {
                     separatorBuilder: (_, __) => const SizedBox(height: 8),
                     itemBuilder: (ctx, i) {
                       final ev = events[i];
-                      return Card(
-                        color: const Color(0xFF1E293B),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          dense: true,
-                          leading: const CircleAvatar(
-                            radius: 18,
-                            backgroundColor: Color(0xFFDC2626),
-                            child: Icon(Icons.personal_injury, color: Colors.white, size: 18),
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(14),
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(builder: (_) => EventDetailScreen(event: ev)),
+                          );
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF151C2C),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFF1E293B)),
                           ),
-                          title: Text(
-                            'Phát hiện Té ngã (${ev.confidencePercent})',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.5),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEF4444).withOpacity(0.14),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.person_off_outlined, color: Color(0xFFF87171), size: 19),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Cảnh báo té ngã • ${ev.confidencePercent}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w600),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${ev.cameraSource}  •  ${ev.timestamp}',
+                                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const Icon(Icons.chevron_right_rounded, color: Color(0xFF475569), size: 20),
+                            ],
                           ),
-                          subtitle: Text(
-                            '${ev.cameraSource} • ${ev.timestamp}',
-                            style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                          ),
-                          trailing: const Icon(Icons.chevron_right, color: Colors.white54),
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => EventDetailScreen(event: ev)),
-                            );
-                          },
                         ),
                       );
                     },
                   );
                 },
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _actionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.14),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 17),
+            const SizedBox(width: 7),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
             ),
           ],
         ),
